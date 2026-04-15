@@ -94,18 +94,13 @@ const OPENCLAW_GATEWAY_TOKEN = resolveGatewayToken();
 process.env.OPENCLAW_GATEWAY_TOKEN = OPENCLAW_GATEWAY_TOKEN;
 
 let cachedOpenclawVersion = null;
-let cachedChannelsHelp = null;
 
 async function getOpenclawInfo() {
   if (!cachedOpenclawVersion) {
-    const [version, channelsHelp] = await Promise.all([
-      runCmd(OPENCLAW_NODE, clawArgs(["--version"])),
-      runCmd(OPENCLAW_NODE, clawArgs(["channels", "add", "--help"])),
-    ]);
+    const version = await runCmd(OPENCLAW_NODE, clawArgs(["--version"]));
     cachedOpenclawVersion = version.output.trim();
-    cachedChannelsHelp = channelsHelp.output;
   }
-  return { version: cachedOpenclawVersion, channelsHelp: cachedChannelsHelp };
+  return { version: cachedOpenclawVersion };
 }
 
 const INTERNAL_GATEWAY_PORT = Number.parseInt(
@@ -466,7 +461,7 @@ app.get("/setup", requireSetupAuth, (_req, res) => {
 });
 
 app.get("/setup/api/status", requireSetupAuth, async (_req, res) => {
-  const { version, channelsHelp } = await getOpenclawInfo();
+  const { version } = await getOpenclawInfo();
 
   const authGroups = [
     {
@@ -699,7 +694,6 @@ app.get("/setup/api/status", requireSetupAuth, async (_req, res) => {
     configured: isConfigured(),
     gatewayTarget: GATEWAY_TARGET,
     openclawVersion: version,
-    channelsAddHelp: channelsHelp,
     authGroups,
     tuiEnabled: ENABLE_WEB_TUI,
   });
@@ -992,7 +986,7 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
           dmPolicy: "pairing",
           botToken: payload.telegramToken.trim(),
           groupPolicy: "open",
-          streamMode: "partial",
+          streaming: { mode: "partial" },
         });
       }
 
