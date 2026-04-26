@@ -12,7 +12,7 @@ RUN apt-get update \
     zip \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g openclaw@2026.4.15 clawhub@latest
+RUN npm install -g openclaw@2026.4.23 clawhub@latest
 
 WORKDIR /app
 
@@ -25,7 +25,16 @@ COPY --chmod=755 entrypoint.sh ./entrypoint.sh
 RUN useradd -m -s /bin/bash openclaw \
   && chown -R openclaw:openclaw /app \
   && mkdir -p /data && chown openclaw:openclaw /data \
-  && mkdir -p /home/linuxbrew/.linuxbrew && chown -R openclaw:openclaw /home/linuxbrew
+  && mkdir -p /home/linuxbrew/.linuxbrew && chown -R openclaw:openclaw /home/linuxbrew \
+  && mv /usr/local/bin/openclaw /usr/local/bin/openclaw-real \
+  && printf '%s\n' \
+    '#!/bin/sh' \
+    'if [ "$(id -u)" = "0" ] && [ "${OPENCLAW_RAILWAY_NO_USER_SWITCH:-}" != "1" ]; then' \
+    '  exec gosu openclaw /usr/local/bin/openclaw-real "$@"' \
+    'fi' \
+    'exec /usr/local/bin/openclaw-real "$@"' \
+    > /usr/local/bin/openclaw \
+  && chmod 755 /usr/local/bin/openclaw
 
 USER openclaw
 RUN NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
